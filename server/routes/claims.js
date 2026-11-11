@@ -18,6 +18,7 @@ router.get('/', requireAuth, (req, res) => {
           items.category AS item_category,
           items.location_zone AS item_zone,
           items.image_url AS item_image,
+          items.status AS item_status,
           items.custody_type AS item_custody,
           items.custody_location AS item_custody_location,
           reporter.name AS reporter_name,
@@ -42,6 +43,9 @@ router.get('/', requireAuth, (req, res) => {
             items.category AS item_category,
             items.location_zone AS item_zone,
             items.image_url AS item_image,
+            items.status AS item_status,
+            items.custody_type AS item_custody,
+            items.custody_location AS item_custody_location,
             claimant.name AS claimant_name,
             claimant.email AS claimant_email,
             claimant.student_id AS claimant_student_id,
@@ -63,6 +67,9 @@ router.get('/', requireAuth, (req, res) => {
             items.category AS item_category,
             items.location_zone AS item_zone,
             items.image_url AS item_image,
+            items.status AS item_status,
+            items.custody_type AS item_custody,
+            items.custody_location AS item_custody_location,
             claimant.name AS claimant_name,
             claimant.email AS claimant_email,
             claimant.student_id AS claimant_student_id,
@@ -99,6 +106,11 @@ router.post('/items/:itemId', requireAuth, (req, res) => {
   const item = db.prepare('SELECT * FROM items WHERE id = ?').get(itemId);
   if (!item) {
     return res.status(404).json({ error: 'Item not found.' });
+  }
+
+  // Cannot submit claim if item has already been officially returned
+  if (item.status === 'RETURNED' || item.custody_type === 'RETURNED') {
+    return res.status(400).json({ error: 'This item has already been returned to its owner and cannot be claimed.' });
   }
 
   if (item.user_id === req.user.id) {
@@ -162,7 +174,7 @@ router.patch('/:id/status', requireAuth, (req, res) => {
 
   const claim = db
     .prepare(`
-      SELECT claims.*, items.user_id AS item_reporter_id, items.title AS item_title
+      SELECT claims.*, items.user_id AS item_reporter_id, items.title AS item_title, items.status AS item_status, items.custody_type AS item_custody_type
       FROM claims
       JOIN items ON claims.item_id = items.id
       WHERE claims.id = ?
@@ -176,6 +188,11 @@ router.patch('/:id/status', requireAuth, (req, res) => {
   // Authorization: Must be the item reporter OR campus security/admin
   if (claim.item_reporter_id !== req.user.id && !['security', 'admin'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Not authorized to evaluate this claim.' });
+  }
+
+  // Prevent approving claims on already-returned items
+  if ((claim.item_status === 'RETURNED' || claim.item_custody_type === 'RETURNED') && status === 'APPROVED') {
+    return res.status(400).json({ error: 'This item has already been officially returned to its owner.' });
   }
 
   try {
@@ -197,6 +214,28 @@ router.patch('/:id/status', requireAuth, (req, res) => {
       db.prepare("UPDATE items SET status = 'RETURNED', custody_type = 'RETURNED', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(
         claim.item_id
       );
+      // Auto-reject any remaining pending claims on this item since it is now returned
+      db.prepare(`
+        UPDATE claims 
+        SET 
+          status = 'REJECTED',
+          review_notes = COALESCE(review_notes, 'Item has been verified and returned to verified claimant.'),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE item_id = ? AND id != ? AND status = 'PENDING'
+      `).run(claim.item_id, claimId);
+    } else if (status === 'REJECTED') {
+      // If rejecting, check if other approved claims exist
+      const hasApproved = db.prepare("SELECT id FROM claims WHERE item_id = ? AND id != ? AND status = 'APPROVED'").get(claim.item_id, claimId);
+      if (!hasApproved) {
+        // Check if other pending claims exist
+        const hasPending = db.prepare("SELECT id FROM claims WHERE item_id = ? AND id != ? AND status = 'PENDING'").get(claim.item_id, claimId);
+        if (hasPending) {
+          db.prepare("UPDATE items SET status = 'CLAIM_PENDING', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status != 'RETURNED'").run(claim.item_id);
+        } else {
+          // No other active claims, revert to REPORTED if not already RETURNED
+          db.prepare("UPDATE items SET status = 'REPORTED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status != 'RETURNED'").run(claim.item_id);
+        }
+      }
     }
 
     // Log activity

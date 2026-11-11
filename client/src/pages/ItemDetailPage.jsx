@@ -322,8 +322,13 @@ export function ItemDetailPage() {
                     <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                       Custodian / Officer Controls
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {item.status !== 'RETURNED' && (
+                    {item.status === 'RETURNED' || item.custody_type === 'RETURNED' ? (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--returned-dark)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                        <CheckCircle2 size={15} />
+                        <span>Case resolved — item officially returned to owner.</span>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <button
                           onClick={() => handleStatusChange('RETURNED', 'RETURNED')}
                           className="btn btn-outline btn-sm"
@@ -333,18 +338,18 @@ export function ItemDetailPage() {
                           <CheckCircle2 size={14} />
                           <span>Mark as Officially Returned to Owner</span>
                         </button>
-                      )}
-                      {item.custody_type !== 'CAMPUS_SECURITY_DESK' && item.status !== 'RETURNED' && (
-                        <button
-                          onClick={() => handleStatusChange(item.status, 'CAMPUS_SECURITY_DESK')}
-                          className="btn btn-outline btn-sm"
-                          disabled={statusUpdating}
-                        >
-                          <ShieldCheck size={14} />
-                          <span>Deposit at Campus Security Desk</span>
-                        </button>
-                      )}
-                    </div>
+                        {item.custody_type !== 'CAMPUS_SECURITY_DESK' && (
+                          <button
+                            onClick={() => handleStatusChange(item.status, 'CAMPUS_SECURITY_DESK')}
+                            className="btn btn-outline btn-sm"
+                            disabled={statusUpdating}
+                          >
+                            <ShieldCheck size={14} />
+                            <span>Deposit at Campus Security Desk</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -413,7 +418,7 @@ export function ItemDetailPage() {
                       )}
 
                       {/* Review Buttons for Reporter/Security */}
-                      {canManage && claim.status === 'PENDING' && (
+                      {canManage && item.status !== 'RETURNED' && item.custody_type !== 'RETURNED' && claim.status === 'PENDING' && (
                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                           <button
                             onClick={() => handleClaimReview(claim.id, 'APPROVED')}
@@ -432,7 +437,7 @@ export function ItemDetailPage() {
                         </div>
                       )}
 
-                      {canManage && claim.status === 'APPROVED' && (
+                      {canManage && item.status !== 'RETURNED' && item.custody_type !== 'RETURNED' && claim.status === 'APPROVED' && (
                         <button
                           onClick={() => handleClaimReview(claim.id, 'HANDOVER_COMPLETED')}
                           className="btn btn-sm btn-found"

@@ -174,7 +174,7 @@ export function ClaimsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem', minWidth: 160 }}>
                   <StatusBadge status={c.status} />
 
-                  {activeTab === 'incoming' && c.status === 'PENDING' && (
+                  {activeTab === 'incoming' && c.status === 'PENDING' && c.item_status !== 'RETURNED' && c.item_custody !== 'RETURNED' && (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => handleUpdateStatus(c.id, 'APPROVED')}
@@ -191,7 +191,7 @@ export function ClaimsPage() {
                     </div>
                   )}
 
-                  {activeTab === 'incoming' && c.status === 'APPROVED' && (
+                  {activeTab === 'incoming' && c.status === 'APPROVED' && c.item_status !== 'RETURNED' && c.item_custody !== 'RETURNED' && (
                     <button
                       onClick={() => handleUpdateStatus(c.id, 'HANDOVER_COMPLETED')}
                       className="btn btn-sm btn-found"

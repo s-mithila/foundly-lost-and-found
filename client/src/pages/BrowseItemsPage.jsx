@@ -175,6 +175,7 @@ export function BrowseItemsPage() {
                 <option value="REPORTED">Open / Reported</option>
                 <option value="MATCH_SUGGESTED">Match Found</option>
                 <option value="CLAIM_PENDING">Claim Under Review</option>
+                <option value="CLAIM_APPROVED">Claim Approved</option>
                 <option value="RETURNED">Returned & Resolved</option>
               </select>
             </div>

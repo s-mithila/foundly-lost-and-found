@@ -236,6 +236,9 @@ router.patch('/:id/status', requireAuth, (req, res) => {
   }
 
   try {
+    const nextStatus = status || item.status;
+    const nextCustody = custody_type || item.custody_type;
+
     db.prepare(`
       UPDATE items 
       SET 
@@ -246,14 +249,36 @@ router.patch('/:id/status', requireAuth, (req, res) => {
       WHERE id = ?
     `).run(status || null, custody_type || null, custody_location || null, itemId);
 
+    // If item is returned or handed over, synchronize all associated claims
+    if (nextStatus === 'RETURNED' || nextCustody === 'RETURNED') {
+      // 1. Mark any APPROVED claim as HANDOVER_COMPLETED
+      db.prepare(`
+        UPDATE claims 
+        SET 
+          status = 'HANDOVER_COMPLETED',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE item_id = ? AND status = 'APPROVED'
+      `).run(itemId);
+
+      // 2. Reject any remaining PENDING claims since the item is now officially returned
+      db.prepare(`
+        UPDATE claims 
+        SET 
+          status = 'REJECTED',
+          review_notes = COALESCE(review_notes, 'Item has officially been returned to verified owner.'),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE item_id = ? AND status = 'PENDING'
+      `).run(itemId);
+    }
+
     // Log activity
     db.prepare(`
       INSERT INTO activity_logs (user_id, action, details)
       VALUES (?, ?, ?)
     `).run(
       req.user.id,
-      status === 'RETURNED' ? 'ITEM_RETURNED' : 'STATUS_UPDATE',
-      `${req.user.name} updated item #${itemId} ("${item.title}") status to ${status || item.status}`
+      nextStatus === 'RETURNED' ? 'ITEM_RETURNED' : 'STATUS_UPDATE',
+      `${req.user.name} updated item #${itemId} ("${item.title}") status to ${nextStatus}`
     );
 
     const updated = db.prepare('SELECT * FROM items WHERE id = ?').get(itemId);

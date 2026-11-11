@@ -400,8 +400,8 @@ npm run build
 #### Q8: How does the frontend communicate with the backend in development?
 **Answer:** Through Vite's built-in development proxy (`vite.config.js`). Any request matching `/api/*` is proxied to `http://localhost:5002`, eliminating Cross-Origin Resource Sharing (CORS) preflight friction during local development.
 
-#### Q9: What happens when a claim is approved?
-**Answer:** The claim status is updated to `APPROVED`, and the corresponding item status transitions to `CLAIM_APPROVED`. Once physical pickup occurs, the reviewer marks it as `HANDOVER_COMPLETED`, setting the item status to `RETURNED`.
+#### Q9: What happens when a claim is approved or an item is handed over?
+**Answer:** When a claim is approved, its status updates to `APPROVED` and the item status transitions to `CLAIM_APPROVED`. When physical pickup occurs and either the item is marked as `RETURNED` on the item details page or the claim is marked as `HANDOVER_COMPLETED` in the Claims Center, Foundly automatically executes bidirectional state synchronization: the item status and custody transition to `RETURNED`, approved claims transition to `HANDOVER_COMPLETED`, and any remaining pending claims on that item are automatically closed to prevent duplicate or conflicting handovers.
 
 #### Q10: How are audit logs maintained?
 **Answer:** Critical state-changing actions (`REPORT_LOST`, `REPORT_FOUND`, `SUBMIT_CLAIM`, `CLAIM_APPROVED`, `ITEM_RETURNED`) execute an atomic `INSERT INTO activity_logs` statement recording the user ID, action type, description, and timestamp.

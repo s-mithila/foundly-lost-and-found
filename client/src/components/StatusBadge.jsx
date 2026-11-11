@@ -28,7 +28,21 @@ export function StatusBadge({ status }) {
           Returned
         </span>
       );
+    case 'HANDOVER_COMPLETED':
+      return (
+        <span className="badge badge-returned">
+          <ShieldCheck size={12} />
+          Handed Over
+        </span>
+      );
     case 'CLAIM_APPROVED':
+      return (
+        <span className="badge badge-found">
+          <CheckCircle2 size={12} />
+          Claim Approved
+        </span>
+      );
+    case 'APPROVED':
       return (
         <span className="badge badge-found">
           <CheckCircle2 size={12} />
@@ -40,6 +54,20 @@ export function StatusBadge({ status }) {
         <span className="badge badge-lost">
           <Clock size={12} />
           Claim Pending
+        </span>
+      );
+    case 'PENDING':
+      return (
+        <span className="badge badge-lost">
+          <Clock size={12} />
+          Pending Review
+        </span>
+      );
+    case 'REJECTED':
+      return (
+        <span className="badge" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}>
+          <AlertCircle size={12} />
+          Rejected
         </span>
       );
     case 'MATCH_SUGGESTED':
@@ -79,6 +107,7 @@ export function CustodyBadge({ custody }) {
   if (custody === 'RETURNED') {
     return (
       <span className="badge badge-returned">
+        <ShieldCheck size={12} />
         Handed Over
       </span>
     );

@@ -16,6 +16,11 @@ export function ClaimModal({ item, onClose, onSuccess }) {
       return;
     }
 
+    if (item.status === 'RETURNED' || item.custody_type === 'RETURNED') {
+      setError('This item has already been officially returned to its owner and cannot be claimed.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
