@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+*.sqlite
+*.sqlite-journal
+server/database/foundly.db
+server/database/foundly.db-journal
+.env
+.env.local
